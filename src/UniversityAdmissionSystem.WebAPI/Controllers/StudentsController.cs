@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UniversityAdmissionSystem.Core.Models;
 using UniversityAdmissionSystem.Core.Services;
+using UniversityAdmissionSystem.WebAPI.Dtos;
 
 namespace UniversityAdmissionSystem.WebAPI.Controllers;
 
@@ -16,51 +17,57 @@ public class StudentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Student>>> GetAllStudents()
+    public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetAllStudents()
     {
         var students = await _studentService.GetAllStudentsAsync();
-        return Ok(students);
+        var responseDtos = students.Select(s => StudentResponseDto.FromEntity(s, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Student>> GetStudentById(int id)
+    public async Task<ActionResult<StudentResponseDto>> GetStudentById(int id)
     {
         var student = await _studentService.GetStudentByIdAsync(id);
         if (student == null)
             return NotFound();
 
-        return Ok(student);
+        var responseDto = StudentResponseDto.FromEntity(student, maskSensitiveData: true);
+        return Ok(responseDto);
     }
 
     [HttpGet("bynumber/{studentNumber}")]
-    public async Task<ActionResult<Student>> GetStudentByNumber(string studentNumber)
+    public async Task<ActionResult<StudentResponseDto>> GetStudentByNumber(string studentNumber)
     {
         var student = await _studentService.GetStudentByStudentNumberAsync(studentNumber);
         if (student == null)
             return NotFound();
 
-        return Ok(student);
+        var responseDto = StudentResponseDto.FromEntity(student, maskSensitiveData: true);
+        return Ok(responseDto);
     }
 
     [HttpGet("byclass/{classId}")]
-    public async Task<ActionResult<IEnumerable<Student>>> GetStudentsByClass(int classId)
+    public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetStudentsByClass(int classId)
     {
         var students = await _studentService.GetStudentsByClassIdAsync(classId);
-        return Ok(students);
+        var responseDtos = students.Select(s => StudentResponseDto.FromEntity(s, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpGet("bydormitory/{dormitoryId}")]
-    public async Task<ActionResult<IEnumerable<Student>>> GetStudentsByDormitory(int dormitoryId)
+    public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetStudentsByDormitory(int dormitoryId)
     {
         var students = await _studentService.GetStudentsByDormitoryIdAsync(dormitoryId);
-        return Ok(students);
+        var responseDtos = students.Select(s => StudentResponseDto.FromEntity(s, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Student>> CreateStudent(Student student)
+    public async Task<ActionResult<StudentResponseDto>> CreateStudent(Student student)
     {
         var createdStudent = await _studentService.CreateStudentAsync(student);
-        return CreatedAtAction(nameof(GetStudentById), new { id = createdStudent.Id }, createdStudent);
+        var responseDto = StudentResponseDto.FromEntity(createdStudent, maskSensitiveData: true);
+        return CreatedAtAction(nameof(GetStudentById), new { id = createdStudent.Id }, responseDto);
     }
 
     [HttpPut("{id}")]

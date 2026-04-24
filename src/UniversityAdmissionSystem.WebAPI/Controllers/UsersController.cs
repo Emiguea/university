@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UniversityAdmissionSystem.Core.Models;
 using UniversityAdmissionSystem.Core.Services;
+using UniversityAdmissionSystem.Infrastructure.Security;
 
 namespace UniversityAdmissionSystem.WebAPI.Controllers;
 
@@ -16,7 +17,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
+    public async Task<ActionResult<IEnumerable<object>>> GetAllUsers()
     {
         var users = await _userService.GetAllUsersAsync();
         return Ok(users.Select(u => new
@@ -25,8 +26,8 @@ public class UsersController : ControllerBase
             u.Username,
             u.FullName,
             u.Gender,
-            u.PhoneNumber,
-            u.Email,
+            PhoneNumber = DataMaskingHelper.MaskPhoneNumber(u.PhoneNumber),
+            Email = DataMaskingHelper.MaskEmail(u.Email),
             u.Department,
             u.Position,
             u.IsActive,
@@ -38,7 +39,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<User>> GetUserById(int id)
+    public async Task<ActionResult<object>> GetUserById(int id)
     {
         var user = await _userService.GetUserByIdAsync(id);
         if (user == null)
@@ -50,8 +51,8 @@ public class UsersController : ControllerBase
             user.Username,
             user.FullName,
             user.Gender,
-            user.PhoneNumber,
-            user.Email,
+            PhoneNumber = DataMaskingHelper.MaskPhoneNumber(user.PhoneNumber),
+            Email = DataMaskingHelper.MaskEmail(user.Email),
             user.Department,
             user.Position,
             user.IsActive,
@@ -63,7 +64,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("byusername/{username}")]
-    public async Task<ActionResult<User>> GetUserByUsername(string username)
+    public async Task<ActionResult<object>> GetUserByUsername(string username)
     {
         var user = await _userService.GetUserByUsernameAsync(username);
         if (user == null)
@@ -75,8 +76,8 @@ public class UsersController : ControllerBase
             user.Username,
             user.FullName,
             user.Gender,
-            user.PhoneNumber,
-            user.Email,
+            PhoneNumber = DataMaskingHelper.MaskPhoneNumber(user.PhoneNumber),
+            Email = DataMaskingHelper.MaskEmail(user.Email),
             user.Department,
             user.Position,
             user.IsActive,
@@ -88,7 +89,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("byrole/{roleId}")]
-    public async Task<ActionResult<IEnumerable<User>>> GetUsersByRole(int roleId)
+    public async Task<ActionResult<IEnumerable<object>>> GetUsersByRole(int roleId)
     {
         var users = await _userService.GetUsersByRoleIdAsync(roleId);
         return Ok(users.Select(u => new
@@ -97,8 +98,8 @@ public class UsersController : ControllerBase
             u.Username,
             u.FullName,
             u.Gender,
-            u.PhoneNumber,
-            u.Email,
+            PhoneNumber = DataMaskingHelper.MaskPhoneNumber(u.PhoneNumber),
+            Email = DataMaskingHelper.MaskEmail(u.Email),
             u.Department,
             u.Position,
             u.IsActive,
@@ -110,10 +111,21 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserRequest request)
+    public async Task<ActionResult<object>> CreateUser([FromBody] CreateUserRequest request)
     {
         try
         {
+            var passwordValidation = _userService.ValidatePasswordStrength(request.Password);
+            if (!passwordValidation.IsValid)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "密码不符合要求",
+                    Errors = passwordValidation.Errors
+                });
+            }
+
             var user = new User
             {
                 Username = request.Username,
@@ -133,8 +145,8 @@ public class UsersController : ControllerBase
                 createdUser.Username,
                 createdUser.FullName,
                 createdUser.Gender,
-                createdUser.PhoneNumber,
-                createdUser.Email,
+                PhoneNumber = DataMaskingHelper.MaskPhoneNumber(createdUser.PhoneNumber),
+                Email = DataMaskingHelper.MaskEmail(createdUser.Email),
                 createdUser.Department,
                 createdUser.Position,
                 createdUser.IsActive,
@@ -187,14 +199,14 @@ public class UsersController : ControllerBase
     {
         var isValid = await _userService.ValidateUserCredentialsAsync(request.Username, request.Password);
         if (!isValid)
-            return Unauthorized("Invalid username or password");
+            return Unauthorized(new { Message = "用户名或密码错误" });
 
         var user = await _userService.GetUserByUsernameAsync(request.Username);
         if (user == null)
             return NotFound();
 
         if (!user.IsActive)
-            return Unauthorized("User is deactivated");
+            return Unauthorized(new { Message = "用户已被禁用" });
 
         await _userService.UpdateLastLoginTimeAsync(user.Id);
 
@@ -213,6 +225,17 @@ public class UsersController : ControllerBase
     {
         try
         {
+            var passwordValidation = _userService.ValidatePasswordStrength(request.NewPassword);
+            if (!passwordValidation.IsValid)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "新密码不符合要求",
+                    Errors = passwordValidation.Errors
+                });
+            }
+
             await _userService.ChangePasswordAsync(userId, request.OldPassword, request.NewPassword);
             return NoContent();
         }
@@ -224,6 +247,10 @@ public class UsersController : ControllerBase
         {
             return Unauthorized(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("{userId}/resetpassword")]
@@ -231,12 +258,27 @@ public class UsersController : ControllerBase
     {
         try
         {
+            var passwordValidation = _userService.ValidatePasswordStrength(request.NewPassword);
+            if (!passwordValidation.IsValid)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "新密码不符合要求",
+                    Errors = passwordValidation.Errors
+                });
+            }
+
             await _userService.ResetPasswordAsync(userId, request.NewPassword);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 
@@ -266,6 +308,32 @@ public class UsersController : ControllerBase
         {
             return NotFound(ex.Message);
         }
+    }
+
+    [HttpGet("password-requirements")]
+    public ActionResult<object> GetPasswordRequirements()
+    {
+        return Ok(new
+        {
+            Requirements = _userService.GetPasswordRequirements(),
+            MinimumLength = PasswordValidator.MinimumLength,
+            MaximumLength = PasswordValidator.MaximumLength,
+            RequireUppercase = PasswordValidator.RequireUppercase,
+            RequireLowercase = PasswordValidator.RequireLowercase,
+            RequireDigit = PasswordValidator.RequireDigit,
+            RequireNonAlphanumeric = PasswordValidator.RequireNonAlphanumeric
+        });
+    }
+
+    [HttpPost("validate-password")]
+    public ActionResult<object> ValidatePassword([FromBody] string password)
+    {
+        var result = _userService.ValidatePasswordStrength(password);
+        return Ok(new
+        {
+            IsValid = result.IsValid,
+            Errors = result.Errors
+        });
     }
 }
 

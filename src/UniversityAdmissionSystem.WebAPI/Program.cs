@@ -39,11 +39,25 @@ builder.Services.AddCors(options =>
         });
 });
 
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHsts(options =>
+    {
+        options.Preload = true;
+        options.IncludeSubDomains = true;
+        options.MaxAge = TimeSpan.FromDays(60);
+    });
+}
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+else
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();

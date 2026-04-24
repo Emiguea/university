@@ -17,4 +17,12 @@ public interface IUserService
     Task ActivateUserAsync(int userId);
     Task DeactivateUserAsync(int userId);
     Task UpdateLastLoginTimeAsync(int userId);
+    PasswordValidationResult ValidatePasswordStrength(string password);
+    string GetPasswordRequirements();
+}
+
+public class PasswordValidationResult
+{
+    public bool IsValid { get; set; }
+    public List<string> Errors { get; set; } = new();
 }

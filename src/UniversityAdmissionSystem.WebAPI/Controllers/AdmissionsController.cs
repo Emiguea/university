@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UniversityAdmissionSystem.Core.Models;
 using UniversityAdmissionSystem.Core.Services;
+using UniversityAdmissionSystem.WebAPI.Dtos;
 
 namespace UniversityAdmissionSystem.WebAPI.Controllers;
 
@@ -16,61 +17,68 @@ public class AdmissionsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Admission>>> GetAllAdmissions()
+    public async Task<ActionResult<IEnumerable<AdmissionResponseDto>>> GetAllAdmissions()
     {
         var admissions = await _admissionService.GetAllAdmissionsAsync();
-        return Ok(admissions);
+        var responseDtos = admissions.Select(a => AdmissionResponseDto.FromEntity(a, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Admission>> GetAdmissionById(int id)
+    public async Task<ActionResult<AdmissionResponseDto>> GetAdmissionById(int id)
     {
         var admission = await _admissionService.GetAdmissionByIdAsync(id);
         if (admission == null)
             return NotFound();
 
-        return Ok(admission);
+        var responseDto = AdmissionResponseDto.FromEntity(admission, maskSensitiveData: true);
+        return Ok(responseDto);
     }
 
     [HttpGet("bystudent/{studentId}")]
-    public async Task<ActionResult<Admission>> GetAdmissionByStudent(int studentId)
+    public async Task<ActionResult<AdmissionResponseDto>> GetAdmissionByStudent(int studentId)
     {
         var admission = await _admissionService.GetAdmissionByStudentIdAsync(studentId);
         if (admission == null)
             return NotFound();
 
-        return Ok(admission);
+        var responseDto = AdmissionResponseDto.FromEntity(admission, maskSensitiveData: true);
+        return Ok(responseDto);
     }
 
     [HttpGet("bynumber/{admissionNumber}")]
-    public async Task<ActionResult<Admission>> GetAdmissionByNumber(string admissionNumber)
+    public async Task<ActionResult<AdmissionResponseDto>> GetAdmissionByNumber(string admissionNumber)
     {
         var admission = await _admissionService.GetAdmissionByAdmissionNumberAsync(admissionNumber);
         if (admission == null)
             return NotFound();
 
-        return Ok(admission);
+        var responseDto = AdmissionResponseDto.FromEntity(admission, maskSensitiveData: true);
+        return Ok(responseDto);
     }
 
     [HttpGet("published")]
-    public async Task<ActionResult<IEnumerable<Admission>>> GetPublishedAdmissions()
+    public async Task<ActionResult<IEnumerable<AdmissionResponseDto>>> GetPublishedAdmissions()
     {
         var admissions = await _admissionService.GetPublishedAdmissionsAsync();
-        return Ok(admissions);
+        var responseDtos = admissions.Select(a => AdmissionResponseDto.FromEntity(a, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpGet("unpublished")]
-    public async Task<ActionResult<IEnumerable<Admission>>> GetUnpublishedAdmissions()
+    public async Task<ActionResult<IEnumerable<AdmissionResponseDto>>> GetUnpublishedAdmissions()
     {
         var admissions = await _admissionService.GetUnpublishedAdmissionsAsync();
-        return Ok(admissions);
+        var responseDtos = admissions.Select(a => AdmissionResponseDto.FromEntity(a, maskSensitiveData: true));
+        return Ok(responseDtos);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Admission>> CreateAdmission(Admission admission)
+    public async Task<ActionResult<AdmissionResponseDto>> CreateAdmission(Admission admission)
     {
         var createdAdmission = await _admissionService.CreateAdmissionAsync(admission);
-        return CreatedAtAction(nameof(GetAdmissionById), new { id = createdAdmission.Id }, createdAdmission);
+        var responseDto = AdmissionResponseDto.FromEntity(createdAdmission, maskSensitiveData: true);
+        return CreatedAtAction(nameof(GetAdmissionById), new { id = createdAdmission.Id }, responseDto);
     }
 
     [HttpPut("{id}")]

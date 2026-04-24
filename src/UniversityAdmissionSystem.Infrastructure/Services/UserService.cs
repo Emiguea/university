@@ -5,6 +5,7 @@ using UniversityAdmissionSystem.Core.Models;
 using UniversityAdmissionSystem.Core.Repositories;
 using UniversityAdmissionSystem.Core.Services;
 using UniversityAdmissionSystem.Infrastructure.Data;
+using UniversityAdmissionSystem.Infrastructure.Security;
 
 namespace UniversityAdmissionSystem.Infrastructure.Services;
 
@@ -59,6 +60,13 @@ public class UserService : IUserService
 
         if (existingUser != null)
             throw new InvalidOperationException("Username already exists");
+
+        var passwordValidation = ValidatePasswordStrength(password);
+        if (!passwordValidation.IsValid)
+        {
+            var errorMessage = string.Join("；", passwordValidation.Errors);
+            throw new InvalidOperationException($"密码不符合要求：{errorMessage}");
+        }
 
         user.PasswordHash = HashPassword(password);
         user.IsActive = true;
@@ -119,6 +127,13 @@ public class UserService : IUserService
         if (!VerifyPassword(oldPassword, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid old password");
 
+        var passwordValidation = ValidatePasswordStrength(newPassword);
+        if (!passwordValidation.IsValid)
+        {
+            var errorMessage = string.Join("；", passwordValidation.Errors);
+            throw new InvalidOperationException($"新密码不符合要求：{errorMessage}");
+        }
+
         user.PasswordHash = HashPassword(newPassword);
         user.UpdatedAt = DateTime.Now;
         _userRepository.Update(user);
@@ -130,6 +145,13 @@ public class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
             throw new KeyNotFoundException("User not found");
+
+        var passwordValidation = ValidatePasswordStrength(newPassword);
+        if (!passwordValidation.IsValid)
+        {
+            var errorMessage = string.Join("；", passwordValidation.Errors);
+            throw new InvalidOperationException($"新密码不符合要求：{errorMessage}");
+        }
 
         user.PasswordHash = HashPassword(newPassword);
         user.UpdatedAt = DateTime.Now;
@@ -171,6 +193,16 @@ public class UserService : IUserService
             _userRepository.Update(user);
             await _userRepository.SaveChangesAsync();
         }
+    }
+
+    public PasswordValidationResult ValidatePasswordStrength(string password)
+    {
+        return PasswordValidator.Validate(password);
+    }
+
+    public string GetPasswordRequirements()
+    {
+        return PasswordValidator.GetPasswordRequirements();
     }
 
     private string HashPassword(string password)
