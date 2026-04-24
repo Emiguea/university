@@ -1,0 +1,314 @@
+@page "/admissions"
+@inject AdmissionService AdmissionService
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<PageTitle>录取管理 - 高校招生录取与新生报到管理系统</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>录取管理</h2>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ToggleAddForm">
+                <i class="fas fa-plus me-2"></i>添加录取
+            </button>
+        </div>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="alert alert-warning">
+            请先登录系统。<a href="/login">点击这里登录</a>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select class="form-select" @bind="filterStatus" @bind:event="oninput">
+                    <option value="all">全部</option>
+                    <option value="published">已发布</option>
+                    <option value="unpublished">未发布</option>
+                </select>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+            </div>
+        }
+        else if (admissions == null || !admissions.Any())
+        {
+            <div class="alert alert-info">
+                暂无录取数据。
+            </div>
+        }
+        else
+        {
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>录取号</th>
+                                    <th>学生姓名</th>
+                                    <th>专业</th>
+                                    <th>院系</th>
+                                    <th>录取类型</th>
+                                    <th>录取日期</th>
+                                    <th>发布状态</th>
+                                    <th>通知书</th>
+                                    <th>邮寄标签</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var admission in admissions)
+                                {
+                                    <tr>
+                                        <td>@(string.IsNullOrEmpty(admission.AdmissionNumber) ? "未分配" : admission.AdmissionNumber)</td>
+                                        <td>@admission.Student?.Name</td>
+                                        <td>@admission.Major</td>
+                                        <td>@admission.Department</td>
+                                        <td>@admission.AdmissionType</td>
+                                        <td>@admission.AdmissionDate.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            @if (admission.IsPublished)
+                                            {
+                                                <span class="badge bg-success">已发布</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">未发布</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admission.IsNoticePrinted)
+                                            {
+                                                <span class="badge bg-info">已打印</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">未打印</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admission.IsMailingLabelPrinted)
+                                            {
+                                                <span class="badge bg-info">已打印</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">未打印</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                @if (!admission.IsPublished)
+                                                {
+                                                    <button class="btn btn-sm btn-success me-1" @onclick="() => PublishAdmission(admission)" title="发布录取信息">
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                }
+                                                @if (!admission.IsNoticePrinted)
+                                                {
+                                                    <button class="btn btn-sm btn-primary me-1" @onclick="() => PrintNotice(admission)" title="打印通知书">
+                                                        <i class="fas fa-print"></i>
+                                                    </button>
+                                                }
+                                                @if (!admission.IsMailingLabelPrinted)
+                                                {
+                                                    <button class="btn btn-sm btn-info me-1" @onclick="() => PrintMailingLabel(admission)" title="打印邮寄标签">
+                                                        <i class="fas fa-envelope"></i>
+                                                    </button>
+                                                }
+                                                @if (string.IsNullOrEmpty(admission.AdmissionNumber))
+                                                {
+                                                    <button class="btn btn-sm btn-secondary me-1" @onclick="() => GenerateAdmissionNumber(admission)" title="生成录取号">
+                                                        <i class="fas fa-id-card"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showAddForm)
+        {
+            <div class="modal show d-block" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">添加录取信息</h5>
+                            <button type="button" class="btn-close" @onclick="ToggleAddForm"></button>
+                        </div>
+                        <div class="modal-body">
+                            <EditForm Model="newAdmission" OnValidSubmit="AddAdmission">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">专业 *</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.Major" placeholder="请输入专业" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">院系 *</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.Department" placeholder="请输入院系" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">录取类型</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.AdmissionType" placeholder="请输入录取类型" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">录取日期</label>
+                                        <InputDate class="form-control" @bind-Value="newAdmission.AdmissionDate" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">邮寄地址</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.MailingAddress" placeholder="请输入邮寄地址" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">邮寄联系人</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.MailingContact" placeholder="请输入邮寄联系人" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">邮寄电话</label>
+                                        <InputText class="form-control" @bind-Value="newAdmission.MailingPhone" placeholder="请输入邮寄电话" />
+                                    </div>
+                                </div>
+                                
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" @onclick="ToggleAddForm">取消</button>
+                                    <button type="submit" class="btn btn-primary" disabled="isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <text>保存中...</text>
+                                        }
+                                        else
+                                        {
+                                            <text>保存</text>
+                                        }
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop show"></div>
+        }
+    }
+</div>
+
+@code {
+    private List<AdmissionDto>? admissions;
+    private bool isLoading = true;
+    private bool showAddForm;
+    private bool isSaving;
+    private string filterStatus = "all";
+    private AdmissionDto newAdmission = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            await LoadAdmissions();
+        }
+    }
+
+    private async Task LoadAdmissions()
+    {
+        isLoading = true;
+        
+        if (filterStatus == "published")
+        {
+            admissions = await AdmissionService.GetPublishedAdmissionsAsync();
+        }
+        else if (filterStatus == "unpublished")
+        {
+            admissions = await AdmissionService.GetUnpublishedAdmissionsAsync();
+        }
+        else
+        {
+            admissions = await AdmissionService.GetAllAdmissionsAsync();
+        }
+        
+        isLoading = false;
+    }
+
+    private void ToggleAddForm()
+    {
+        showAddForm = !showAddForm;
+        if (showAddForm)
+        {
+            newAdmission = new AdmissionDto
+            {
+                AdmissionDate = DateTime.Now,
+                AdmissionType = "普通录取"
+            };
+        }
+    }
+
+    private async Task AddAdmission()
+    {
+        isSaving = true;
+        var result = await AdmissionService.CreateAdmissionAsync(newAdmission);
+        if (result != null)
+        {
+            ToggleAddForm();
+            await LoadAdmissions();
+        }
+        isSaving = false;
+    }
+
+    private async Task PublishAdmission(AdmissionDto admission)
+    {
+        var success = await AdmissionService.PublishAdmissionAsync(admission.Id);
+        if (success)
+        {
+            await LoadAdmissions();
+        }
+    }
+
+    private async Task PrintNotice(AdmissionDto admission)
+    {
+        var success = await AdmissionService.PrintAdmissionNoticeAsync(admission.Id);
+        if (success)
+        {
+            await LoadAdmissions();
+        }
+    }
+
+    private async Task PrintMailingLabel(AdmissionDto admission)
+    {
+        var success = await AdmissionService.PrintMailingLabelAsync(admission.Id);
+        if (success)
+        {
+            await LoadAdmissions();
+        }
+    }
+
+    private async Task GenerateAdmissionNumber(AdmissionDto admission)
+    {
+        var success = await AdmissionService.GenerateAdmissionNumberAsync(admission.Id);
+        if (success)
+        {
+            await LoadAdmissions();
+        }
+    }
+}

@@ -1,0 +1,381 @@
+@page "/students"
+@inject StudentService StudentService
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<PageTitle>学生管理 - 高校招生录取与新生报到管理系统</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>学生管理</h2>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ToggleAddForm">
+                <i class="fas fa-plus me-2"></i>添加学生
+            </button>
+        </div>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="alert alert-warning">
+            请先登录系统。<a href="/login">点击这里登录</a>
+        </div>
+    }
+    else
+    {
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+            </div>
+        }
+        else if (students == null || !students.Any())
+        {
+            <div class="alert alert-info">
+                暂无学生数据。
+            </div>
+        }
+        else
+        {
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>学号</th>
+                                    <th>姓名</th>
+                                    <th>性别</th>
+                                    <th>身份证号</th>
+                                    <th>联系电话</th>
+                                    <th>专业</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var student in students)
+                                {
+                                    <tr>
+                                        <td>@(string.IsNullOrEmpty(student.StudentNumber) ? "未分配" : student.StudentNumber)</td>
+                                        <td>@student.Name</td>
+                                        <td>@student.Gender</td>
+                                        <td>@MaskIdCard(student.IdCardNumber)</td>
+                                        <td>@student.PhoneNumber</td>
+                                        <td>@student.Admission?.Major</td>
+                                        <td>
+                                            @if (student.Registration?.IsRegistered == true)
+                                            {
+                                                <span class="badge bg-success">已报到</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">未报到</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ViewStudent(student)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => GenerateStudentNumber(student)">
+                                                <i class="fas fa-id-card"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showAddForm)
+        {
+            <div class="modal show d-block" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">添加新学生</h5>
+                            <button type="button" class="btn-close" @onclick="ToggleAddForm"></button>
+                        </div>
+                        <div class="modal-body">
+                            <EditForm Model="newStudent" OnValidSubmit="AddStudent">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">姓名 *</label>
+                                        <InputText class="form-control" @bind-Value="newStudent.Name" placeholder="请输入姓名" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">性别 *</label>
+                                        <InputSelect class="form-select" @bind-Value="newStudent.Gender">
+                                            <option value="">请选择</option>
+                                            <option value="男">男</option>
+                                            <option value="女">女</option>
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">出生日期</label>
+                                        <InputDate class="form-control" @bind-Value="newStudent.BirthDate" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">身份证号 *</label>
+                                        <InputText class="form-control" @bind-Value="newStudent.IdCardNumber" placeholder="请输入身份证号" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">联系电话</label>
+                                        <InputText class="form-control" @bind-Value="newStudent.PhoneNumber" placeholder="请输入联系电话" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">电子邮箱</label>
+                                        <InputText class="form-control" @bind-Value="newStudent.Email" placeholder="请输入电子邮箱" />
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">家庭住址</label>
+                                        <InputText class="form-control" @bind-Value="newStudent.Address" placeholder="请输入家庭住址" />
+                                    </div>
+                                </div>
+                                
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" @onclick="ToggleAddForm">取消</button>
+                                    <button type="submit" class="btn btn-primary" disabled="isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <text>保存中...</text>
+                                        }
+                                        else
+                                        {
+                                            <text>保存</text>
+                                        }
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop show"></div>
+        }
+
+        @if (selectedStudent != null && showViewForm)
+        {
+            <div class="modal show d-block" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">学生详情</h5>
+                            <button type="button" class="btn-close" @onclick="CloseViewForm"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6>基本信息</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>学号：</td>
+                                    <td>@(string.IsNullOrEmpty(selectedStudent.StudentNumber) ? "未分配" : selectedStudent.StudentNumber)</td>
+                                </tr>
+                                <tr>
+                                    <td>姓名：</td>
+                                    <td>@selectedStudent.Name</td>
+                                </tr>
+                                <tr>
+                                    <td>性别：</td>
+                                    <td>@selectedStudent.Gender</td>
+                                </tr>
+                                <tr>
+                                    <td>出生日期：</td>
+                                    <td>@selectedStudent.BirthDate.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                                <tr>
+                                    <td>身份证号：</td>
+                                    <td>@MaskIdCard(selectedStudent.IdCardNumber)</td>
+                                </tr>
+                                <tr>
+                                    <td>联系电话：</td>
+                                    <td>@selectedStudent.PhoneNumber</td>
+                                </tr>
+                                <tr>
+                                    <td>电子邮箱：</td>
+                                    <td>@selectedStudent.Email</td>
+                                </tr>
+                                <tr>
+                                    <td>家庭住址：</td>
+                                    <td>@selectedStudent.Address</td>
+                                </tr>
+                            </table>
+
+                            @if (selectedStudent.Admission != null)
+                            {
+                                <h6 class="mt-4">录取信息</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>录取号：</td>
+                                        <td>@selectedStudent.Admission.AdmissionNumber</td>
+                                    </tr>
+                                    <tr>
+                                        <td>专业：</td>
+                                        <td>@selectedStudent.Admission.Major</td>
+                                    </tr>
+                                    <tr>
+                                        <td>院系：</td>
+                                        <td>@selectedStudent.Admission.Department</td>
+                                    </tr>
+                                    <tr>
+                                        <td>录取类型：</td>
+                                        <td>@selectedStudent.Admission.AdmissionType</td>
+                                    </tr>
+                                    <tr>
+                                        <td>录取日期：</td>
+                                        <td>@selectedStudent.Admission.AdmissionDate.ToString("yyyy-MM-dd")</td>
+                                    </tr>
+                                    <tr>
+                                        <td>发布状态：</td>
+                                        <td>@(selectedStudent.Admission.IsPublished ? "已发布" : "未发布")</td>
+                                    </tr>
+                                </table>
+                            }
+
+                            @if (selectedStudent.Registration != null)
+                            {
+                                <h6 class="mt-4">报到信息</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>报到状态：</td>
+                                        <td>@(selectedStudent.Registration.IsRegistered ? "已报到" : "未报到")</td>
+                                    </tr>
+                                    @if (selectedStudent.Registration.IsRegistered)
+                                    {
+                                        <tr>
+                                            <td>报到日期：</td>
+                                            <td>@selectedStudent.Registration.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                        </tr>
+                                        <tr>
+                                            <td>报到地点：</td>
+                                            <td>@selectedStudent.Registration.RegistrationLocation</td>
+                                        </tr>
+                                        <tr>
+                                            <td>登记人：</td>
+                                            <td>@selectedStudent.Registration.Registrar</td>
+                                        </tr>
+                                    }
+                                </table>
+                            }
+
+                            @if (selectedStudent.Payment != null)
+                            {
+                                <h6 class="mt-4">缴费信息</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>缴费状态：</td>
+                                        <td>@selectedStudent.Payment.PaymentStatus</td>
+                                    </tr>
+                                    <tr>
+                                        <td>应缴金额：</td>
+                                        <td>¥@selectedStudent.Payment.TotalAmount.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td>已缴金额：</td>
+                                        <td>¥@selectedStudent.Payment.PaidAmount.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td>剩余金额：</td>
+                                        <td>¥@selectedStudent.Payment.RemainingAmount.ToString("N2")</td>
+                                    </tr>
+                                </table>
+                            }
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseViewForm">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop show"></div>
+        }
+    }
+</div>
+
+@code {
+    private List<StudentDto>? students;
+    private bool isLoading = true;
+    private bool showAddForm;
+    private bool showViewForm;
+    private bool isSaving;
+    private StudentDto newStudent = new();
+    private StudentDto? selectedStudent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            await LoadStudents();
+        }
+    }
+
+    private async Task LoadStudents()
+    {
+        isLoading = true;
+        students = await StudentService.GetAllStudentsAsync();
+        isLoading = false;
+    }
+
+    private void ToggleAddForm()
+    {
+        showAddForm = !showAddForm;
+        if (showAddForm)
+        {
+            newStudent = new StudentDto
+            {
+                BirthDate = DateTime.Now
+            };
+        }
+    }
+
+    private async Task AddStudent()
+    {
+        isSaving = true;
+        var result = await StudentService.CreateStudentAsync(newStudent);
+        if (result != null)
+        {
+            ToggleAddForm();
+            await LoadStudents();
+        }
+        isSaving = false;
+    }
+
+    private void ViewStudent(StudentDto student)
+    {
+        selectedStudent = student;
+        showViewForm = true;
+    }
+
+    private void CloseViewForm()
+    {
+        showViewForm = false;
+        selectedStudent = null;
+    }
+
+    private async Task GenerateStudentNumber(StudentDto student)
+    {
+        if (string.IsNullOrEmpty(student.StudentNumber))
+        {
+            await StudentService.GenerateStudentNumberAsync(student.Id);
+            await LoadStudents();
+        }
+    }
+
+    private string MaskIdCard(string idCard)
+    {
+        if (string.IsNullOrEmpty(idCard) || idCard.Length < 8)
+            return idCard;
+        
+        return idCard.Substring(0, 6) + "********" + idCard.Substring(idCard.Length - 4);
+    }
+}

@@ -1,0 +1,253 @@
+﻿@page "/"
+@inject AuthService AuthService
+@inject StatisticsService StatisticsService
+@inject NavigationManager NavigationManager
+
+<PageTitle>首页 - 高校招生录取与新生报到管理系统</PageTitle>
+
+<div class="container-fluid mt-4">
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="jumbotron bg-light p-5 rounded">
+                    <h1 class="display-4">高校招生录取与新生报到管理系统</h1>
+                    <p class="lead mt-3">集录取信息发布、通知书打印、新生分配、报到登记、缴费管理于一体的综合管理平台</p>
+                    <hr class="my-4">
+                    <p class="mb-4">请登录系统以访问所有功能</p>
+                    <button class="btn btn-primary btn-lg" @onclick="NavigateToLogin">登录系统</button>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col">
+                <h2>欢迎回来，@AuthService.CurrentUser?.FullName</h2>
+                <p class="text-muted">@AuthService.CurrentUser?.Department - @AuthService.CurrentUser?.Position</p>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2">加载统计数据...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">录取总人数</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics?.TotalAdmittedStudents</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">报到人数</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics?.TotalRegisteredStudents</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">报到率</div>
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col-auto">
+                                            <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">@statistics?.RegistrationRate%</div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="progress progress-sm mr-2">
+                                                <div class="progress-bar bg-info" role="progressbar"
+                                                     style="width: @(statistics?.RegistrationRate ?? 0)%"
+                                                     aria-valuenow="@(statistics?.RegistrationRate ?? 0)"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">缴费率</div>
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col-auto">
+                                            <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">@statistics?.PaymentRate%</div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="progress progress-sm mr-2">
+                                                <div class="progress-bar bg-warning" role="progressbar"
+                                                     style="width: @(statistics?.PaymentRate ?? 0)%"
+                                                     aria-valuenow="@(statistics?.PaymentRate ?? 0)"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-6 mb-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">快速操作</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-primary btn-block" @onclick="NavigateToStudents">
+                                        <i class="fas fa-users me-2"></i>学生管理
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-success btn-block" @onclick="NavigateToAdmissions">
+                                        <i class="fas fa-graduation-cap me-2"></i>录取管理
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-info btn-block" @onclick="NavigateToRegistrations">
+                                        <i class="fas fa-clipboard-check me-2"></i>报到管理
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-warning btn-block" @onclick="NavigateToPayments">
+                                        <i class="fas fa-receipt me-2"></i>缴费管理
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-dark btn-block" @onclick="NavigateToStatistics">
+                                        <i class="fas fa-chart-bar me-2"></i>统计报表
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-6 mb-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">系统状态</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>录取总人数</span>
+                                    <span class="badge bg-primary rounded-pill">@statistics?.TotalAdmittedStudents</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>已报到人数</span>
+                                    <span class="badge bg-success rounded-pill">@statistics?.TotalRegisteredStudents</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>已缴费人数</span>
+                                    <span class="badge bg-warning rounded-pill">@statistics?.TotalPaidStudents</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>缴费总额</span>
+                                    <span class="badge bg-info rounded-pill">¥@statistics?.TotalPaymentAmount.ToString("N2")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private StatisticsSummary? statistics;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            await LoadStatistics();
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        isLoading = true;
+        statistics = await StatisticsService.GetSummaryAsync();
+        isLoading = false;
+    }
+
+    private void NavigateToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private void NavigateToStudents()
+    {
+        NavigationManager.NavigateTo("/students");
+    }
+
+    private void NavigateToAdmissions()
+    {
+        NavigationManager.NavigateTo("/admissions");
+    }
+
+    private void NavigateToRegistrations()
+    {
+        NavigationManager.NavigateTo("/registrations");
+    }
+
+    private void NavigateToPayments()
+    {
+        NavigationManager.NavigateTo("/payments");
+    }
+
+    private void NavigateToStatistics()
+    {
+        NavigationManager.NavigateTo("/statistics");
+    }
+}
