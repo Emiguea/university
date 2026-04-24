@@ -1,0 +1,115 @@
+@page "/payments"
+@inject AuthService AuthService
+
+<PageTitle>缴费管理 - 高校招生录取与新生报到管理系统</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>缴费管理</h2>
+        </div>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="alert alert-warning">
+            请先登录系统。<a href="/login">点击这里登录</a>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">缴费信息录入</h5>
+                <p class="text-muted">在此页面可以进行新生缴费信息录入和查询缴费状态。</p>
+                
+                <div class="alert alert-info">
+                    <strong>功能说明：</strong>
+                    <ul class="mb-0">
+                        <li>录入学生缴费信息</li>
+                        <li>记录缴费金额、支付方式、交易ID</li>
+                        <li>查询学生缴费状态和欠费情况</li>
+                        <li>自动计算已缴金额和剩余金额</li>
+                    </ul>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                缴费录入
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">学生ID</label>
+                                    <input type="text" class="form-control" placeholder="请输入学生ID" @bind="studentId" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">缴费金额</label>
+                                    <input type="number" class="form-control" placeholder="请输入缴费金额" @bind="amount" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">支付方式</label>
+                                    <select class="form-select" @bind="paymentMethod">
+                                        <option value="">请选择支付方式</option>
+                                        <option value="现金">现金</option>
+                                        <option value="微信支付">微信支付</option>
+                                        <option value="支付宝">支付宝</option>
+                                        <option value="银行卡">银行卡</option>
+                                        <option value="转账">转账</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">交易ID（可选）</label>
+                                    <input type="text" class="form-control" placeholder="请输入交易ID" @bind="transactionId" />
+                                </div>
+                                <button class="btn btn-success" disabled="true">
+                                    <i class="fas fa-receipt me-2"></i>记录缴费
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                缴费状态统计
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>已缴费人数</span>
+                                        <span class="badge bg-success rounded-pill">-</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>未缴费人数</span>
+                                        <span class="badge bg-danger rounded-pill">-</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>部分缴费人数</span>
+                                        <span class="badge bg-warning rounded-pill">-</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>缴费总额</span>
+                                        <span class="badge bg-info rounded-pill">¥-</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>缴费率</span>
+                                        <span class="badge bg-primary rounded-pill">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string studentId = string.Empty;
+    private decimal amount;
+    private string paymentMethod = string.Empty;
+    private string transactionId = string.Empty;
+}
