@@ -1,0 +1,82 @@
+@page "/login"
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">高校招生录取与新生报到管理系统</h4>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+                    
+                    <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <InputText id="username" class="form-control" @bind-Value="loginModel.Username" placeholder="请输入用户名" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="请输入密码" />
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" disabled="isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <text>登录中...</text>
+                            }
+                            else
+                            {
+                                <text>登录</text>
+                            }
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        var success = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
+        
+        if (success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = "用户名或密码错误，请重试。";
+        }
+        
+        isLoading = false;
+    }
+
+    private class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "用户名不能为空")]
+        public string Username { get; set; } = string.Empty;
+        
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "密码不能为空")]
+        public string Password { get; set; } = string.Empty;
+    }
+}
